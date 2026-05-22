@@ -22,7 +22,8 @@ export async function queryReportsFromSupabase(searchParams: URLSearchParams): P
     p_page: query.page,
     p_page_size: query.pageSize,
     p_sort: query.sort,
-    p_dir: query.dir
+    p_dir: query.dir,
+    p_price_basis: query.priceBasis
   });
 
   if (error) {

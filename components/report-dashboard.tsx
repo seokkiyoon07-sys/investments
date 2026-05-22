@@ -19,6 +19,7 @@ type Filters = {
   pageSize: number;
   sort: string;
   dir: 'asc' | 'desc';
+  priceBasis: 'after' | 'before';
 };
 
 const INITIAL_FILTERS: Filters = {
@@ -35,7 +36,8 @@ const INITIAL_FILTERS: Filters = {
   page: 1,
   pageSize: 100,
   sort: 'report_date',
-  dir: 'desc'
+  dir: 'desc',
+  priceBasis: 'after'
 };
 
 const TP_CHANGE_LABELS = ['상향', '유지', '하향', '신규'];
@@ -165,6 +167,12 @@ export function ReportDashboard() {
               <input type="date" value={filters.to} onChange={(e) => update({ to: e.target.value })} />
             </Field>
           </div>
+          <Field label="가격 기준">
+            <select value={filters.priceBasis} onChange={(e) => update({ priceBasis: e.target.value as Filters['priceBasis'] })}>
+              <option value="after">발행 후 +6M / +1Y</option>
+              <option value="before">발행 전 -6M / -1Y</option>
+            </select>
+          </Field>
 
           <SectionTitle>검색</SectionTitle>
           <Field label="키워드">
@@ -237,8 +245,8 @@ export function ReportDashboard() {
             <StatCard label="종목 수" value={formatNumber(data?.stats.stocks)} />
             <StatCard label="제공처 수" value={formatNumber(data?.stats.providers)} />
             <StatCard label="작성자 수" value={formatNumber(data?.stats.authors)} />
-            <StatCard label="TP 평균 적중률" value={formatPct(data?.stats.targetHitRate.pct)} sub={hitRateSub(data)} />
-            <StatCard label="평균 6m 수익률" value={formatPct(data?.stats.avgReturn6m, true)} />
+            <StatCard label={filters.priceBasis === 'before' ? '과거가 TP 대비' : 'TP 평균 적중률'} value={formatPct(data?.stats.targetHitRate.pct)} sub={hitRateSub(data)} />
+            <StatCard label={filters.priceBasis === 'before' ? '평균 -6m 대비' : '평균 +6m 수익률'} value={formatPct(data?.stats.avgReturn6m, true)} />
           </div>
 
           <div className="tabs">
@@ -255,6 +263,7 @@ export function ReportDashboard() {
             filters={filters}
             update={update}
             sortBy={sortBy}
+            priceBasis={filters.priceBasis}
           /> : <AnalyticsView view={view} data={analytics} loading={analyticsLoading} />}
         </section>
       </div>
@@ -267,14 +276,19 @@ function ReportTable({
   loading,
   filters,
   update,
-  sortBy
+  sortBy,
+  priceBasis
 }: {
   data: ReportListResponse | null;
   loading: boolean;
   filters: Filters;
   update: (patch: Partial<Filters>) => void;
   sortBy: (sort: string) => void;
+  priceBasis: Filters['priceBasis'];
 }) {
+  const sixMonthLabel = priceBasis === 'before' ? '-6m' : '+6m';
+  const oneYearLabel = priceBasis === 'before' ? '-1y' : '+1y';
+
   return (
     <div className="table-card">
             <div className="table-toolbar">
@@ -301,14 +315,14 @@ function ReportTable({
                     <SortableTh label="의견" id="opinion" filters={filters} onSort={sortBy} />
                     <SortableTh label="목표주가" id="target_price" filters={filters} onSort={sortBy} />
                     <SortableTh label="전일종가" id="prev_close" filters={filters} onSort={sortBy} />
-                    <SortableTh label="+6m" id="actual_6m" filters={filters} onSort={sortBy} />
-                    <SortableTh label="+1y" id="actual_1y" filters={filters} onSort={sortBy} />
+                    <SortableTh label={sixMonthLabel} id="actual_6m" filters={filters} onSort={sortBy} />
+                    <SortableTh label={oneYearLabel} id="actual_1y" filters={filters} onSort={sortBy} />
                     <SortableTh label="제공처/작성자" id="provider" filters={filters} onSort={sortBy} />
                   </tr>
                 </thead>
                 <tbody>
                   {data?.rows.map((report) => (
-                    <ReportRow key={report.source_key} report={report} />
+                    <ReportRow key={report.source_key} report={report} priceBasis={priceBasis} />
                   ))}
                   {!loading && data?.rows.length === 0 ? (
                     <tr>
@@ -462,9 +476,10 @@ function ChangeRankPanel({ title, rows, direction }: { title: string; rows: Chan
   );
 }
 
-function ReportRow({ report }: { report: Report }) {
+function ReportRow({ report, priceBasis }: { report: Report; priceBasis: Filters['priceBasis'] }) {
   const ret6m = calcReturn(report.actual_6m, report.prev_close);
   const ret1y = calcReturn(report.actual_1y, report.prev_close);
+  const basisTone = priceBasis === 'before' ? 'history' : 'outcome';
 
   return (
     <tr>
@@ -474,7 +489,7 @@ function ReportRow({ report }: { report: Report }) {
           {report.gicode ? <Link href={`/stocks/${encodeURIComponent(report.gicode)}`}><strong>{report.stock_name}</strong></Link> : <strong>{report.stock_name}</strong>}
           {report.gicode ? <span>{report.gicode}</span> : null}
         </div>
-        <div className="report-title">{report.title}<OriginalLink report={report} /></div>
+        <div className="report-title">{report.title}<OriginalLink report={report} /><DartLink report={report} /></div>
         <ul className="summary-list">
           {report.summary.slice(0, 3).map((item, index) => (
             <li key={`${report.source_key}-${index}`}>{item}</li>
@@ -484,8 +499,8 @@ function ReportRow({ report }: { report: Report }) {
       <td>{changeMark(report.opinion_change)}<OpinionBadge value={report.opinion} /></td>
       <td className="num">{changeMark(report.target_price_change)}{formatNumber(report.target_price)}</td>
       <td className="num muted">{formatNumber(report.prev_close)}</td>
-      <td className="num">{formatNumber(report.actual_6m)}<br /><small>{formatPct(ret6m, true)}</small></td>
-      <td className="num">{formatNumber(report.actual_1y)}<br /><small>{formatPct(ret1y, true)}</small></td>
+      <td className={`num ${basisTone}`}>{formatNumber(report.actual_6m)}<br /><small>{formatPct(ret6m, true)}</small></td>
+      <td className={`num ${basisTone}`}>{formatNumber(report.actual_1y)}<br /><small>{formatPct(ret1y, true)}</small></td>
       <td>
         <div>{report.is_best ? <span className="best-badge">BEST</span> : null}{report.provider || '-'}</div>
         <small className="accent">{report.author || '-'}</small>
@@ -498,6 +513,13 @@ function OriginalLink({ report }: { report: Report }) {
   const url = report.naver_url || report.hankyung_url || report.newspim_url;
   if (!url) return null;
   return <a className="source-link" href={url} target="_blank" rel="noreferrer">원문</a>;
+}
+
+function DartLink({ report }: { report: Report }) {
+  if (!report.gicode) return null;
+  const code = report.gicode.replace(/^A/i, '');
+  const url = `https://dart.fss.or.kr/dsab007/main.do?option=corp&textCrpNm=${encodeURIComponent(code)}`;
+  return <a className="source-link dart-link" href={url} target="_blank" rel="noreferrer">DART 공시</a>;
 }
 
 function OpinionBadge({ value }: { value: string | null }) {

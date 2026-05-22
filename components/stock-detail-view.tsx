@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Report, StockDetailResponse, TargetPoint } from '@/lib/report-types';
+import { DartDisclosures } from './dart-disclosures';
 
 export function StockDetailView({ detail }: { detail: StockDetailResponse }) {
   return (
@@ -20,6 +21,8 @@ export function StockDetailView({ detail }: { detail: StockDetailResponse }) {
         <StockStat label="최근 종가" value={formatNumber(detail.latestClose)} />
         <StockStat label="목표주가 범위" value={`${formatNumber(detail.targetPriceMin)} ~ ${formatNumber(detail.targetPriceMax)}`} />
       </section>
+
+      <DartDisclosures gicode={detail.gicode} />
 
       <section className="panel">
         <h2>작성자별 목표주가</h2>

@@ -6,3 +6,4 @@ out
 npm-debug.log*
 data/*.csv
 data/*.ndjson
+tsconfig.tsbuildinfo

@@ -23,6 +23,7 @@ export type QueryParams = {
   pageSize: number;
   sort: keyof Report;
   dir: 'asc' | 'desc';
+  priceBasis: 'after' | 'before';
 };
 
 const DATA_PATH = join(process.cwd(), 'data', 'reports.ndjson');
@@ -46,7 +47,7 @@ export async function queryReports(searchParams: URLSearchParams): Promise<Repor
   const cache = await loadReportCache();
   const query = parseReportQuery(searchParams);
   const filtered = applyReportFilters(cache.rows, query);
-  const stats = buildStats(filtered);
+  const stats = buildStats(filtered, query);
   const sorted = applySort(filtered, query);
   const totalPages = Math.max(1, Math.ceil(sorted.length / query.pageSize));
   const page = Math.min(Math.max(1, query.page), totalPages);
@@ -104,7 +105,8 @@ export function parseReportQuery(searchParams: URLSearchParams): QueryParams {
     page: Math.max(1, Number(searchParams.get('page') || 1)),
     pageSize,
     sort: sort && SORTABLE.has(sort) ? sort : 'report_date',
-    dir
+    dir,
+    priceBasis: searchParams.get('priceBasis') === 'before' ? 'before' : 'after'
   };
 }
 
@@ -141,8 +143,8 @@ export function applyReportFilters(rows: Report[], query: QueryParams): Report[]
 function applySort(rows: Report[], query: QueryParams): Report[] {
   const direction = query.dir === 'asc' ? 1 : -1;
   return rows.slice().sort((a, b) => {
-    const av = a[query.sort];
-    const bv = b[query.sort];
+    const av = getSortValue(a, query);
+    const bv = getSortValue(b, query);
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
@@ -153,19 +155,20 @@ function applySort(rows: Report[], query: QueryParams): Report[] {
   });
 }
 
-function buildStats(rows: Report[]): ReportStats {
+function buildStats(rows: Report[], query: QueryParams): ReportStats {
   let hit = 0;
   let targetTotal = 0;
   let returnSum = 0;
   let returnCount = 0;
 
   for (const row of rows) {
-    if (row.target_price != null && row.actual_6m != null) {
+    const basis6m = getBasisPrice(row, query.priceBasis, '6m');
+    if (row.target_price != null && basis6m != null) {
       targetTotal += 1;
-      if (row.actual_6m >= row.target_price * 0.9) hit += 1;
+      if (basis6m >= row.target_price * 0.9) hit += 1;
     }
-    if (row.prev_close != null && row.actual_6m != null) {
-      returnSum += (row.actual_6m / row.prev_close - 1) * 100;
+    if (row.prev_close != null && basis6m != null) {
+      returnSum += (basis6m / row.prev_close - 1) * 100;
       returnCount += 1;
     }
   }
@@ -182,6 +185,19 @@ function buildStats(rows: Report[]): ReportStats {
     },
     avgReturn6m: returnCount ? returnSum / returnCount : null
   };
+}
+
+function getSortValue(row: Report, query: QueryParams) {
+  if (query.sort === 'actual_6m') return getBasisPrice(row, query.priceBasis, '6m');
+  if (query.sort === 'actual_1y') return getBasisPrice(row, query.priceBasis, '1y');
+  return row[query.sort];
+}
+
+function getBasisPrice(row: Report, priceBasis: 'after' | 'before', horizon: '6m' | '1y') {
+  if (priceBasis === 'before') {
+    return horizon === '6m' ? row.previous_6m ?? null : row.previous_1y ?? null;
+  }
+  return horizon === '6m' ? row.actual_6m : row.actual_1y;
 }
 
 function buildOptions(rows: Report[]): ReportOptions {

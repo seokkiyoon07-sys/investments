@@ -566,6 +566,15 @@ tr:hover td {
   font-size: 10px;
 }
 
+.source-link.dart-link {
+  color: var(--accent);
+  border-color: rgba(56, 189, 248, 0.32);
+}
+
+.source-link.dart-link:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+
 .opinion {
   display: inline-block;
   padding: 2px 6px;
@@ -759,4 +768,73 @@ tr:hover td {
   margin: 8px 0 0;
   padding-left: 18px;
   color: var(--muted);
+}
+
+/* DART 공시 패널 */
+#dart {
+  scroll-margin-top: 16px;
+}
+
+.dart-search-link {
+  margin-left: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.dart-search-link:hover {
+  text-decoration: underline;
+}
+
+.dart-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dart-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.dart-row:last-child {
+  border-bottom: none;
+}
+
+.dart-date {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dart-title {
+  flex: 1 1 320px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.dart-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.dart-filer {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.dart-note {
+  padding: 14px;
+  background: #0b1220;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
 }

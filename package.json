@@ -10,6 +10,7 @@
     "data:export": "node scripts/export-dashboard-payload.mjs",
     "sync:prices": "node scripts/sync-naver-prices.mjs",
     "sync:reports": "node scripts/sync-fnguide-reports.mjs",
+    "sync:dart": "node scripts/sync-dart-corp-codes.mjs",
     "update:actuals": "node scripts/update-report-actuals.mjs"
   },
   "dependencies": {

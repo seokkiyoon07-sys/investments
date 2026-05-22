@@ -78,9 +78,13 @@ async function getReportBounds() {
 function emptyResult() {
   return {
     matchedReports: 0,
+    availablePrevious6m: 0,
+    availablePrevious1y: 0,
     available6m: 0,
     available1y: 0,
     updatedReports: 0,
+    filledPrevious6m: 0,
+    filledPrevious1y: 0,
     filled6m: 0,
     filled1y: 0
   };

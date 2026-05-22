@@ -15,6 +15,11 @@ export type Report = {
   is_best: boolean;
   actual_6m: number | null;
   actual_1y: number | null;
+  previous_6m?: number | null;
+  previous_1y?: number | null;
+  actual_6m_after?: number | null;
+  actual_1y_after?: number | null;
+  price_basis?: 'after' | 'before';
   naver_url: string | null;
   hankyung_url: string | null;
   newspim_url: string | null;
