@@ -17,9 +17,7 @@ export async function GET() {
   }
 
   const supabase = getSupabaseServerClient();
-  const { count, error } = await supabase
-    .from('reports')
-    .select('source_key', { count: 'exact', head: true });
+  const { data, error } = await supabase.rpc('dashboard_health_check');
 
   if (error) {
     return NextResponse.json(
@@ -33,32 +31,22 @@ export async function GET() {
     );
   }
 
-  const { error: rpcError } = await supabase.rpc('search_reports', {
-    p_from: null,
-    p_to: null,
-    p_keyword: null,
-    p_stock: null,
-    p_provider: null,
-    p_author: null,
-    p_opinions: null,
-    p_tp_changes: null,
-    p_best_only: false,
-    p_has_tp: false,
-    p_page: 1,
-    p_page_size: 1,
-    p_sort: 'report_date',
-    p_dir: 'desc'
-  });
-
-  const reportsCount = count ?? 0;
-  const ok = reportsCount > 0 && !rpcError;
+  const health = data as {
+    reportsCount?: number;
+    searchReportsRpcReady?: boolean;
+    reportAnalyticsRpcReady?: boolean;
+  } | null;
+  const reportsCount = health?.reportsCount ?? 0;
+  const searchReportsRpcReady = Boolean(health?.searchReportsRpcReady);
+  const reportAnalyticsRpcReady = Boolean(health?.reportAnalyticsRpcReady);
+  const ok = reportsCount > 0 && searchReportsRpcReady && reportAnalyticsRpcReady;
 
   return NextResponse.json({
     ok,
     supabaseConfigured: true,
     nodeEnv: process.env.NODE_ENV,
     reportsCount,
-    searchReportsRpcReady: !rpcError,
-    error: rpcError?.message
+    searchReportsRpcReady,
+    reportAnalyticsRpcReady
   }, { status: ok ? 200 : 503 });
 }

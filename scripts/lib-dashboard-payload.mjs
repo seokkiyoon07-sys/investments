@@ -102,6 +102,7 @@ export function normalizeReport(row) {
     out[key] = stringOrNull(out[key]);
   }
 
+  if (!out.title) out.title = '(제목 없음)';
   out.source_key = makeSourceKey(out);
   return out;
 }

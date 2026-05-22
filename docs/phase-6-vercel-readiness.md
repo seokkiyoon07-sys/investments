@@ -48,4 +48,4 @@ Expected result:
 ```
 
 If `ok` is false, check the Vercel env vars first, then confirm that the Supabase `reports` table was imported.
-The health check also verifies that the `search_reports` RPC exists.
+The health check uses `dashboard_health_check()` to verify row count and required RPC functions without running the heavier dashboard query.
