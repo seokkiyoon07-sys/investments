@@ -37,6 +37,8 @@ npm run sync:reports -- --source payload --input "../dashboard (1).html"
 
 `--source live` is the default. `--source payload` remains available for importing the existing dashboard HTML payload.
 
+After a successful report sync, the script refreshes the default analytics cache used by the dashboard aggregation tabs. Pass `--skip-cache-refresh` only when you intentionally want to refresh it later.
+
 ## Scheduling
 
 GitHub Actions workflows:

@@ -31,6 +31,12 @@ if (dryRun) {
     onConflict: 'source_key',
     chunkSize
   });
+  if (!args['skip-cache-refresh']) {
+    console.log('Refreshing report analytics cache...');
+    const { error } = await supabase.rpc('refresh_report_analytics_cache');
+    if (error) throw new Error(`Analytics cache refresh failed: ${error.message}`);
+    console.log('Report analytics cache refreshed.');
+  }
   console.log(`Done. ${reports.length} reports upserted.`);
 }
 
