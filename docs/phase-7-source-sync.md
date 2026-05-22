@@ -24,6 +24,18 @@ If `reports` is already imported to Supabase, the default `--source auto` reads 
 
 For long backfills, use `--years 10` to request ten years of daily prices from Naver. `--only-missing` skips symbols whose stored rows already cover the requested range, and `--max-symbols` plus `--offset` lets the backfill run in smaller batches.
 
+After prices are available, update report outcome fields from the stored daily closes:
+
+```bash
+npm run update:actuals
+npm run update:actuals -- --overwrite
+npm run update:actuals -- --from 2025-01-01 --to 2025-12-31
+npm run update:actuals -- --from 2025-01-01 --to 2025-12-31 --batch none
+```
+
+`actual_6m` and `actual_1y` use the first available Naver close on or after six months / one year from each report date, with a 14-day trading-day holiday window.
+The script batches by month by default to avoid Supabase API statement timeouts during large historical recalculations.
+
 ## Reports
 
 `scripts/sync-fnguide-reports.mjs` fetches FnGuide summary reports from `SVD_Report_Summary_Data.asp` and upserts normalized rows into `public.reports`.

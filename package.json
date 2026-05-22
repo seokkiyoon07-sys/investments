@@ -9,7 +9,8 @@
     "data:profile": "node scripts/profile-dashboard-payload.mjs",
     "data:export": "node scripts/export-dashboard-payload.mjs",
     "sync:prices": "node scripts/sync-naver-prices.mjs",
-    "sync:reports": "node scripts/sync-fnguide-reports.mjs"
+    "sync:reports": "node scripts/sync-fnguide-reports.mjs",
+    "update:actuals": "node scripts/update-report-actuals.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
