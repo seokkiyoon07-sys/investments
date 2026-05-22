@@ -8,7 +8,7 @@ export async function queryReportsFromSupabase(searchParams: URLSearchParams): P
   const query = parseReportQuery(searchParams);
   const supabase = getSupabaseServerClient();
 
-  const { data, error } = await supabase.rpc('search_reports', {
+  const rpcParams = {
     p_from: query.from || null,
     p_to: query.to || null,
     p_keyword: query.keyword || null,
@@ -22,11 +22,26 @@ export async function queryReportsFromSupabase(searchParams: URLSearchParams): P
     p_page: query.page,
     p_page_size: query.pageSize,
     p_sort: query.sort,
-    p_dir: query.dir,
+    p_dir: query.dir
+  };
+
+  const { data, error } = await supabase.rpc('search_reports', {
+    ...rpcParams,
     p_price_basis: query.priceBasis
   });
 
   if (error) {
+    if (query.priceBasis === 'after' && isMissingPriceBasisRpc(error.message)) {
+      const fallback = await supabase.rpc('search_reports', rpcParams);
+      if (!fallback.error) {
+        return {
+          ...(fallback.data as SearchReportsRpcResponse),
+          source: 'supabase',
+          warning: 'Supabase search_reports RPC is using the legacy signature; apply migration 0010 for price basis switching.'
+        };
+      }
+    }
+
     throw new Error(`Supabase search_reports failed: ${error.message}`);
   }
 
@@ -34,4 +49,12 @@ export async function queryReportsFromSupabase(searchParams: URLSearchParams): P
     ...(data as SearchReportsRpcResponse),
     source: 'supabase'
   };
+}
+
+function isMissingPriceBasisRpc(message: string) {
+  return message.includes('search_reports') && (
+    message.includes('p_price_basis') ||
+    message.includes('schema cache') ||
+    message.includes('Could not find the function')
+  );
 }
