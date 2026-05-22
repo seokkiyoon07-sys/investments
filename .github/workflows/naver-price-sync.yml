@@ -1,0 +1,27 @@
+name: Naver price sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 16:30 KST, Monday-Friday.
+    - cron: '30 7 * * 1-5'
+
+jobs:
+  sync-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync recent Naver prices
+        run: npm run sync:prices -- --source supabase --days 7 --delay 150

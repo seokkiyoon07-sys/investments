@@ -1,0 +1,26 @@
+{
+  "name": "fnguide-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "data:profile": "node scripts/profile-dashboard-payload.mjs",
+    "data:export": "node scripts/export-dashboard-payload.mjs",
+    "sync:prices": "node scripts/sync-naver-prices.mjs",
+    "sync:reports": "node scripts/sync-fnguide-reports.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.2"
+  }
+}

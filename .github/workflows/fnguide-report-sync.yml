@@ -1,0 +1,27 @@
+name: FnGuide report sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 08:30 KST, Monday-Friday.
+    - cron: '30 23 * * 0-4'
+
+jobs:
+  sync-reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync recent FnGuide reports
+        run: npm run sync:reports -- --source live --days 3 --delay 150
