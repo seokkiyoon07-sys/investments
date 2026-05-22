@@ -2,6 +2,27 @@ name: Naver price sync
 
 on:
   workflow_dispatch:
+    inputs:
+      days:
+        description: Recent days to sync
+        required: false
+        default: '7'
+      years:
+        description: Backfill years instead of days
+        required: false
+        default: ''
+      max_symbols:
+        description: Optional symbol batch size
+        required: false
+        default: ''
+      offset:
+        description: Optional symbol batch offset
+        required: false
+        default: '0'
+      only_missing:
+        description: Skip symbols that already cover the requested range
+        required: false
+        default: 'true'
   schedule:
     # 16:30 KST, Monday-Friday.
     - cron: '30 7 * * 1-5'
@@ -23,5 +44,21 @@ jobs:
 
       - run: npm ci
 
-      - name: Sync recent Naver prices
-        run: npm run sync:prices -- --source supabase --days 7 --delay 150
+      - name: Sync Naver prices
+        run: |
+          ARGS="--source supabase --delay 150"
+          if [ -n "${{ github.event.inputs.years }}" ]; then
+            ARGS="$ARGS --years ${{ github.event.inputs.years }}"
+          else
+            ARGS="$ARGS --days ${{ github.event.inputs.days || '7' }}"
+          fi
+          if [ -n "${{ github.event.inputs.max_symbols }}" ]; then
+            ARGS="$ARGS --max-symbols ${{ github.event.inputs.max_symbols }}"
+          fi
+          if [ -n "${{ github.event.inputs.offset }}" ]; then
+            ARGS="$ARGS --offset ${{ github.event.inputs.offset }}"
+          fi
+          if [ "${{ github.event.inputs.only_missing || 'true' }}" = "true" ]; then
+            ARGS="$ARGS --only-missing"
+          fi
+          npm run sync:prices -- $ARGS

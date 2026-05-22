@@ -16,9 +16,13 @@ Examples:
 npm run sync:prices -- --symbols A005930,A000660 --from 2026-05-01 --to 2026-05-22 --dry-run
 npm run sync:prices -- --symbols A005930,A000660 --days 30
 npm run sync:prices -- --source local --days 7
+npm run sync:prices -- --source supabase --years 10 --only-missing
+npm run sync:prices -- --source supabase --years 10 --max-symbols 300 --offset 0 --only-missing
 ```
 
 If `reports` is already imported to Supabase, the default `--source auto` reads distinct `gicode` values from Supabase. If Supabase has no rows, it falls back to `data/reports.ndjson`.
+
+For long backfills, use `--years 10` to request ten years of daily prices from Naver. `--only-missing` skips symbols whose stored rows already cover the requested range, and `--max-symbols` plus `--offset` lets the backfill run in smaller batches.
 
 ## Reports
 
@@ -59,3 +63,5 @@ Schedules use UTC cron but are documented here in KST:
 - Naver prices: 16:30 KST, Monday-Friday.
 
 Both workflows can also be launched manually from the Actions tab.
+
+For a one-time ten-year price backfill, run the Naver price sync workflow manually with `years=10`, `only_missing=true`, and a conservative `max_symbols` batch such as `300`. Increase `offset` by the same batch size for the next run.

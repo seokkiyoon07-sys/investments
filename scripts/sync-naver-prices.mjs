@@ -9,7 +9,7 @@ const NAVER_SISE_URL = 'https://api.finance.naver.com/siseJson.naver';
 
 const args = parseArgs(process.argv.slice(2));
 const supabase = createSupabaseAdmin();
-const from = normalizeDateArg(args.from) || daysAgo(Number(args.days || 30));
+const from = normalizeDateArg(args.from) || defaultFromDate();
 const to = normalizeDateArg(args.to) || today();
 const dryRun = Boolean(args['dry-run']);
 const source = args.source || 'auto';
@@ -24,6 +24,13 @@ console.log(`Fetching Naver prices for ${symbols.length} symbols from ${from} to
 let allRows = [];
 for (let index = 0; index < symbols.length; index += 1) {
   const symbol = symbols[index];
+  if (args['only-missing'] && await hasPriceCoverage(symbol, from, to)) {
+    if ((index + 1) % 25 === 0 || index + 1 === symbols.length) {
+      console.log(`Checked ${index + 1}/${symbols.length} symbols, ${allRows.length} price rows`);
+    }
+    continue;
+  }
+
   const rows = await fetchNaverPrices(symbol, from, to);
   allRows = allRows.concat(rows);
 
@@ -47,20 +54,24 @@ if (dryRun) {
 console.log(`Done. ${allRows.length} Naver price rows ${dryRun ? 'prepared' : 'upserted'}.`);
 
 async function resolveSymbols() {
+  const offset = Number(args.offset || 0);
+  const maxSymbols = args['max-symbols'] ? Number(args['max-symbols']) : null;
+  const sliceSymbols = (items) => items.slice(offset, maxSymbols ? offset + maxSymbols : undefined);
+
   if (args.symbols) {
-    return uniqueSymbols(String(args.symbols).split(','));
+    return sliceSymbols(uniqueSymbols(String(args.symbols).split(',')));
   }
 
   if (args.file) {
     const text = readFileSync(resolve(args.file), 'utf8');
-    return uniqueSymbols(text.split(/\r?\n|,/));
+    return sliceSymbols(uniqueSymbols(text.split(/\r?\n|,/)));
   }
 
-  if (source === 'local') return symbolsFromLocalReports();
-  if (source === 'supabase') return symbolsFromSupabase();
+  if (source === 'local') return sliceSymbols(await symbolsFromLocalReports());
+  if (source === 'supabase') return sliceSymbols(await symbolsFromSupabase());
 
   const remote = await symbolsFromSupabase();
-  return remote.length ? remote : symbolsFromLocalReports();
+  return sliceSymbols(remote.length ? remote : await symbolsFromLocalReports());
 }
 
 async function symbolsFromSupabase() {
@@ -125,6 +136,46 @@ async function fetchNaverPrices(gicode, startDate, endDate) {
   return parseNaverSiseJson(text, `A${symbol}`);
 }
 
+async function hasPriceCoverage(gicode, startDate, endDate) {
+  const [{ data: firstRows, error: firstError }, { data: lastRows, error: lastError }, { count, error: countError }] = await Promise.all([
+    supabase
+      .from('stock_prices')
+      .select('price_date')
+      .eq('gicode', gicode)
+      .gte('price_date', startDate)
+      .lte('price_date', endDate)
+      .order('price_date', { ascending: true })
+      .limit(1),
+    supabase
+      .from('stock_prices')
+      .select('price_date')
+      .eq('gicode', gicode)
+      .gte('price_date', startDate)
+      .lte('price_date', endDate)
+      .order('price_date', { ascending: false })
+      .limit(1),
+    supabase
+      .from('stock_prices')
+      .select('price_date', { count: 'exact', head: true })
+      .eq('gicode', gicode)
+      .gte('price_date', startDate)
+      .lte('price_date', endDate)
+  ]);
+
+  const error = firstError || lastError || countError;
+  if (error) {
+    console.warn(`Could not read existing prices for ${gicode}: ${error.message}`);
+    return false;
+  }
+
+  const first = firstRows?.[0]?.price_date;
+  const last = lastRows?.[0]?.price_date;
+  if (!first || !last || !count) return false;
+
+  const expectedTradingDays = Math.max(1, Math.floor(daysBetween(startDate, endDate) * (5 / 7) * 0.82));
+  return first <= addDays(startDate, 7) && last >= addDays(endDate, -7) && count >= expectedTradingDays;
+}
+
 export function parseNaverSiseJson(text, gicode) {
   const jsonText = text
     .replace(/^\s+|\s+$/g, '')
@@ -181,9 +232,32 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function defaultFromDate() {
+  if (args.years) return yearsAgo(Number(args.years));
+  return daysAgo(Number(args.days || 30));
+}
+
+function yearsAgo(years) {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - years);
+  return date.toISOString().slice(0, 10);
+}
+
 function daysAgo(days) {
   const date = new Date();
   date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function daysBetween(startDate, endDate) {
+  const start = new Date(`${startDate}T00:00:00.000Z`);
+  const end = new Date(`${endDate}T00:00:00.000Z`);
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+}
+
+function addDays(value, days) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
