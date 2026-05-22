@@ -32,10 +32,16 @@ if (dryRun) {
     chunkSize
   });
   if (!args['skip-cache-refresh']) {
-    console.log('Refreshing report analytics cache...');
-    const { error } = await supabase.rpc('refresh_report_analytics_cache');
-    if (error) throw new Error(`Analytics cache refresh failed: ${error.message}`);
-    console.log('Report analytics cache refreshed.');
+    const dates = reports.map((report) => report.report_date).filter(Boolean).sort();
+    const fromDate = dates[0] || from;
+    const toDate = dates[dates.length - 1] || to;
+    console.log(`Refreshing report rollups from ${fromDate} to ${toDate}...`);
+    const { error } = await supabase.rpc('refresh_report_rollups', {
+      p_from: fromDate,
+      p_to: toDate
+    });
+    if (error) throw new Error(`Report rollup refresh failed: ${error.message}`);
+    console.log('Report rollups refreshed.');
   }
   console.log(`Done. ${reports.length} reports upserted.`);
 }
